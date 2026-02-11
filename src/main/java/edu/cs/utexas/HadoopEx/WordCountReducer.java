@@ -1,22 +1,30 @@
+
 package edu.cs.utexas.HadoopEx;
 
-import java.io.IOException;
-
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 
-public class WordCountReducer extends  Reducer<Text, IntWritable, Text, IntWritable> {
+import java.io.IOException;
 
-   public void reduce(Text text, Iterable<IntWritable> values, Context context)
-           throws IOException, InterruptedException {
-	   
-       int sum = 0;
-       
-       for (IntWritable value : values) {
-           sum += value.get();
-       }
-       
-       context.write(text, new IntWritable(sum));
-   }
+public class WordCountReducer extends Reducer<Text, DoubleWritable, Text, DoubleWritable> {
+
+    @Override
+    public void reduce(Text key, Iterable<DoubleWritable> values, Context context)
+            throws IOException, InterruptedException {
+
+        double sum = 0.0;
+        long cnt = 0;
+
+        for (DoubleWritable v : values) {
+            sum += v.get();
+            cnt++;
+        }
+
+        double avg = (cnt == 0) ? 0.0 : (sum / cnt);
+        context.write(key, new DoubleWritable(avg));
+    }
 }
+
+
+

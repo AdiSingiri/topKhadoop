@@ -1,3 +1,102 @@
+// package edu.cs.utexas.HadoopEx;
+
+// import java.io.IOException;
+
+// import org.apache.hadoop.conf.Configuration;
+// import org.apache.hadoop.conf.Configured;
+// import org.apache.hadoop.fs.Path;
+// import org.apache.hadoop.io.IntWritable;
+// import org.apache.hadoop.io.Text;
+// import org.apache.hadoop.mapreduce.Job;
+// import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+// import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+// import org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat;
+// import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+// import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+// import org.apache.hadoop.util.Tool;
+// import org.apache.hadoop.util.ToolRunner;
+// import org.apache.hadoop.io.DoubleWritable;
+
+
+// public class WordCountTopKDriver extends Configured implements Tool {
+
+// 	/**
+// 	 * 
+// 	 * @param args
+// 	 * @throws Exception
+// 	 */
+
+// 	public static void main(String[] args) throws Exception {
+// 		int res = ToolRunner.run(new Configuration(), new WordCountTopKDriver(), args);
+// 		System.exit(res);
+// 	}
+
+// 	/**
+// 	 * 
+// 	 */
+// 	public int run(String args[]) {
+// 		try {
+// 			Configuration conf = new Configuration();
+
+// 			Job job = new Job(conf, "WordCount");
+// 			job.setJarByClass(WordCountTopKDriver.class);
+
+// 			// specify a Mapper
+// 			job.setMapperClass(WordCountMapper.class);
+
+// 			// specify a Reducer
+// 			job.setReducerClass(WordCountReducer.class);
+
+// 			// specify output types
+// 			job.setOutputKeyClass(Text.class);
+// 			job.setOutputValueClass(IntWritable.class);
+
+// 			// specify input and output directories
+// 			FileInputFormat.addInputPath(job, new Path(args[0]));
+// 			job.setInputFormatClass(TextInputFormat.class);
+
+// 			FileOutputFormat.setOutputPath(job, new Path(args[1]));
+// 			job.setOutputFormatClass(TextOutputFormat.class);
+
+// 			if (!job.waitForCompletion(true)) {
+// 				return 1;
+// 			}
+
+// 			Job job2 = new Job(conf, "TopK");
+// 			job2.setJarByClass(WordCountTopKDriver.class);
+
+// 			// specify a Mapper
+// 			job2.setMapperClass(TopKMapper.class);
+
+// 			// specify a Reducer
+// 			job2.setReducerClass(TopKReducer.class);
+
+// 			// specify output types
+// 			job.setOutputKeyClass(Text.class);
+// 			job.setOutputValueClass(DoubleWritable.class);
+
+
+// 			// set the number of reducer to 1
+// 			job2.setNumReduceTasks(1);
+
+// 			// specify input and output directories
+// 			FileInputFormat.addInputPath(job2, new Path(args[1]));
+// 			job2.setInputFormatClass(KeyValueTextInputFormat.class);
+
+// 			FileOutputFormat.setOutputPath(job2, new Path(args[2]));
+// 			job2.setOutputFormatClass(TextOutputFormat.class);
+
+// 			return (job2.waitForCompletion(true) ? 0 : 1);
+
+// 		} catch (InterruptedException | ClassNotFoundException | IOException e) {
+// 			System.err.println("Error during driver job.");
+// 			e.printStackTrace();
+// 			return 2;
+// 		}
+// 	}
+// }
+
+
 package edu.cs.utexas.HadoopEx;
 
 import java.io.IOException;
@@ -5,12 +104,12 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -18,77 +117,69 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class WordCountTopKDriver extends Configured implements Tool {
 
-	/**
-	 * 
-	 * @param args
-	 * @throws Exception
-	 */
+    public static void main(String[] args) throws Exception {
+        int res = ToolRunner.run(new Configuration(), new WordCountTopKDriver(), args);
+        System.exit(res);
+    }
 
-	public static void main(String[] args) throws Exception {
-		int res = ToolRunner.run(new Configuration(), new WordCountTopKDriver(), args);
-		System.exit(res);
-	}
+    public int run(String args[]) {
+        try {
+            Configuration conf = new Configuration();
 
-	/**
-	 * 
-	 */
-	public int run(String args[]) {
-		try {
-			Configuration conf = new Configuration();
+            // ---------------- Job 1: compute metric per key ----------------
+            Job job = new Job(conf, "WordCount");
+            job.setJarByClass(WordCountTopKDriver.class);
 
-			Job job = new Job(conf, "WordCount");
-			job.setJarByClass(WordCountTopKDriver.class);
+            job.setMapperClass(WordCountMapper.class);
+            job.setReducerClass(WordCountReducer.class);
 
-			// specify a Mapper
-			job.setMapperClass(WordCountMapper.class);
+            // IMPORTANT: mapper emits (Text, DoubleWritable)
+            job.setMapOutputKeyClass(Text.class);
+            job.setMapOutputValueClass(DoubleWritable.class);
 
-			// specify a Reducer
-			job.setReducerClass(WordCountReducer.class);
+            // reducer outputs (Text, DoubleWritable)
+            job.setOutputKeyClass(Text.class);
+            job.setOutputValueClass(DoubleWritable.class);
 
-			// specify output types
-			job.setOutputKeyClass(Text.class);
-			job.setOutputValueClass(IntWritable.class);
+            FileInputFormat.addInputPath(job, new Path(args[0]));
+            job.setInputFormatClass(TextInputFormat.class);
 
-			// specify input and output directories
-			FileInputFormat.addInputPath(job, new Path(args[0]));
-			job.setInputFormatClass(TextInputFormat.class);
+            FileOutputFormat.setOutputPath(job, new Path(args[1]));
+            job.setOutputFormatClass(TextOutputFormat.class);
 
-			FileOutputFormat.setOutputPath(job, new Path(args[1]));
-			job.setOutputFormatClass(TextOutputFormat.class);
+            if (!job.waitForCompletion(true)) {
+                return 1;
+            }
 
-			if (!job.waitForCompletion(true)) {
-				return 1;
-			}
+            // ---------------- Job 2: global TopK ----------------
+            Job job2 = new Job(conf, "TopK");
+            job2.setJarByClass(WordCountTopKDriver.class);
 
-			Job job2 = new Job(conf, "TopK");
-			job2.setJarByClass(WordCountTopKDriver.class);
+            job2.setMapperClass(TopKMapper.class);
+            job2.setReducerClass(TopKReducer.class);
 
-			// specify a Mapper
-			job2.setMapperClass(TopKMapper.class);
+            // IMPORTANT: TopK mapper emits (Text, DoubleWritable)
+            job2.setMapOutputKeyClass(Text.class);
+            job2.setMapOutputValueClass(DoubleWritable.class);
 
-			// specify a Reducer
-			job2.setReducerClass(TopKReducer.class);
+            // TopK reducer outputs (Text, DoubleWritable)
+            job2.setOutputKeyClass(Text.class);
+            job2.setOutputValueClass(DoubleWritable.class);
 
-			// specify output types
-			job2.setOutputKeyClass(Text.class);
-			job2.setOutputValueClass(IntWritable.class);
+            job2.setNumReduceTasks(1);
 
-			// set the number of reducer to 1
-			job2.setNumReduceTasks(1);
+            FileInputFormat.addInputPath(job2, new Path(args[1]));
+            job2.setInputFormatClass(KeyValueTextInputFormat.class);
 
-			// specify input and output directories
-			FileInputFormat.addInputPath(job2, new Path(args[1]));
-			job2.setInputFormatClass(KeyValueTextInputFormat.class);
+            FileOutputFormat.setOutputPath(job2, new Path(args[2]));
+            job2.setOutputFormatClass(TextOutputFormat.class);
 
-			FileOutputFormat.setOutputPath(job2, new Path(args[2]));
-			job2.setOutputFormatClass(TextOutputFormat.class);
+            return (job2.waitForCompletion(true) ? 0 : 1);
 
-			return (job2.waitForCompletion(true) ? 0 : 1);
-
-		} catch (InterruptedException | ClassNotFoundException | IOException e) {
-			System.err.println("Error during driver job.");
-			e.printStackTrace();
-			return 2;
-		}
-	}
+        } catch (InterruptedException | ClassNotFoundException | IOException e) {
+            System.err.println("Error during driver job.");
+            e.printStackTrace();
+            return 2;
+        }
+    }
 }

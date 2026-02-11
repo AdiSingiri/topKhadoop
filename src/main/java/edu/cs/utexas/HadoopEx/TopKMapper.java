@@ -1,55 +1,97 @@
+// package edu.cs.utexas.HadoopEx;
+
+// import org.apache.hadoop.io.IntWritable;
+// import org.apache.hadoop.io.Text;
+// import org.apache.hadoop.mapreduce.Mapper;
+
+// import java.io.IOException;
+// import java.util.PriorityQueue;
+
+
+// import org.apache.log4j.Logger;
+
+
+// public class TopKMapper extends Mapper<Text, Text, Text, IntWritable> {
+
+// 	private Logger logger = Logger.getLogger(TopKMapper.class);
+
+
+// 	private PriorityQueue<WordAndCount> pq;
+
+// 	public void setup(Context context) {
+// 		pq = new PriorityQueue<>();
+
+// 	}
+
+// 	/**
+// 	 * Reads in results from the first job and filters the topk results
+// 	 *
+// 	 * @param key
+// 	 * @param value a float value stored as a string
+// 	 */
+// 	public void map(Text key, Text value, Context context)
+// 			throws IOException, InterruptedException {
+
+
+// 		int count = Integer.parseInt(value.toString());
+
+// 		pq.add(new WordAndCount(new Text(key), new IntWritable(count)) );
+
+// 		if (pq.size() > 3) { //edit made here
+// 			pq.poll();
+// 		}
+// 	}
+
+// 	public void cleanup(Context context) throws IOException, InterruptedException {
+
+
+// 		while (pq.size() > 0) {
+// 			WordAndCount wordAndCount = pq.poll();
+// 			context.write(wordAndCount.getWord(), wordAndCount.getCount());
+// 			logger.info("TopKMapper PQ Status: " + pq.toString());
+// 		}
+// 	}
+
+// }
+
+
+// TopKMapper.java
 package edu.cs.utexas.HadoopEx;
 
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.PriorityQueue;
 
+public class TopKMapper extends Mapper<Text, Text, Text, DoubleWritable> {
 
-import org.apache.log4j.Logger;
+    private Logger logger = Logger.getLogger(TopKMapper.class);
+    private PriorityQueue<WordAndCount> pq;
 
+    @Override
+    public void setup(Context context) {
+        pq = new PriorityQueue<>();
+    }
 
-public class TopKMapper extends Mapper<Text, Text, Text, IntWritable> {
+    @Override
+    public void map(Text key, Text value, Context context)
+            throws IOException, InterruptedException {
 
-	private Logger logger = Logger.getLogger(TopKMapper.class);
+        double metric = Double.parseDouble(value.toString());
+        pq.add(new WordAndCount(new Text(key), new DoubleWritable(metric)));
 
+        if (pq.size() > 3) pq.poll();
+    }
 
-	private PriorityQueue<WordAndCount> pq;
-
-	public void setup(Context context) {
-		pq = new PriorityQueue<>();
-
-	}
-
-	/**
-	 * Reads in results from the first job and filters the topk results
-	 *
-	 * @param key
-	 * @param value a float value stored as a string
-	 */
-	public void map(Text key, Text value, Context context)
-			throws IOException, InterruptedException {
-
-
-		int count = Integer.parseInt(value.toString());
-
-		pq.add(new WordAndCount(new Text(key), new IntWritable(count)) );
-
-		if (pq.size() > 10) {
-			pq.poll();
-		}
-	}
-
-	public void cleanup(Context context) throws IOException, InterruptedException {
-
-
-		while (pq.size() > 0) {
-			WordAndCount wordAndCount = pq.poll();
-			context.write(wordAndCount.getWord(), wordAndCount.getCount());
-			logger.info("TopKMapper PQ Status: " + pq.toString());
-		}
-	}
-
+    @Override
+    public void cleanup(Context context) throws IOException, InterruptedException {
+        while (!pq.isEmpty()) {
+            WordAndCount wc = pq.poll();
+            context.write(wc.getWord(), wc.getCount());
+        }
+        logger.info("TopKMapper cleanup complete.");
+    }
 }
